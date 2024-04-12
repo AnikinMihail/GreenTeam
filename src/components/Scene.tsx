@@ -61,6 +61,10 @@ export default function Page() {
                 <GetNGrassTiles n={5} row={7} nstart={4} />
                 <GetNGrassTiles n={3} row={8} nstart={5} />
                 <GetNGrassTiles n={1} row={9} nstart={6} />
+                <GLTFModelLoader
+                    src="/models/houses/red-1.gltf"
+                    position={new THREE.Vector3(6, 1, 12)}
+                />
             </Canvas>
         </div>
     )
