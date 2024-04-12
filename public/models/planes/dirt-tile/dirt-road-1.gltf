@@ -21,11 +21,11 @@
 	"nodes":[
 		{
 			"mesh":0,
-			"name":"Cube.001"
+			"name":"Block"
 		},
 		{
 			"mesh":1,
-			"name":"Cube.002",
+			"name":"Border",
 			"translation":[
 				0.0019649427849799395,
 				-0.013864438980817795,
@@ -34,7 +34,7 @@
 		},
 		{
 			"mesh":2,
-			"name":"Sphere.001",
+			"name":"Rock.001",
 			"scale":[
 				0.7293680906295776,
 				0.28003060817718506,
@@ -48,7 +48,7 @@
 		},
 		{
 			"mesh":3,
-			"name":"Cube.003",
+			"name":"Road",
 			"translation":[
 				0.0004727360501419753,
 				-0.0038279748987406492,
@@ -57,7 +57,7 @@
 		},
 		{
 			"mesh":4,
-			"name":"Sphere.002",
+			"name":"Rock.002",
 			"scale":[
 				0.7293680906295776,
 				0.28003060817718506,
@@ -71,7 +71,7 @@
 		},
 		{
 			"mesh":5,
-			"name":"Sphere.003",
+			"name":"Rock.003",
 			"scale":[
 				0.7293680906295776,
 				0.28003060817718506,
@@ -85,7 +85,7 @@
 		},
 		{
 			"mesh":6,
-			"name":"Sphere.004",
+			"name":"Rock.004",
 			"scale":[
 				0.7293680906295776,
 				0.28003060817718506,
@@ -121,6 +121,20 @@
 					0.800000011920929,
 					0.800000011920929,
 					0.800000011920929,
+					1
+				],
+				"metallicFactor":0,
+				"roughnessFactor":0.5
+			}
+		},
+		{
+			"doubleSided":true,
+			"name":"DirtRoad",
+			"pbrMetallicRoughness":{
+				"baseColorFactor":[
+					0.62972092628479,
+					0.2824057340621948,
+					0.05462447926402092,
 					1
 				],
 				"metallicFactor":0,
@@ -223,7 +237,7 @@
 						"TEXCOORD_0":14
 					},
 					"indices":15,
-					"material":0
+					"material":2
 				}
 			]
 		},
@@ -237,7 +251,7 @@
 						"TEXCOORD_0":18
 					},
 					"indices":11,
-					"material":2
+					"material":3
 				}
 			]
 		},
@@ -251,7 +265,7 @@
 						"TEXCOORD_0":21
 					},
 					"indices":11,
-					"material":3
+					"material":4
 				}
 			]
 		},
@@ -265,7 +279,7 @@
 						"TEXCOORD_0":24
 					},
 					"indices":11,
-					"material":4
+					"material":5
 				}
 			]
 		}

@@ -1,14 +1,21 @@
 "use client"
 
-import { Clone, OrbitControls } from "@react-three/drei"
+import {
+    Clone,
+    OrbitControls,
+    OrbitControlsChangeEvent,
+} from "@react-three/drei"
 import { Canvas, useFrame } from "@react-three/fiber"
 import * as THREE from "three"
 import HouseModel from "./HouseModel"
 import GLTFModelLoader from "./GLTFModelLoader"
 import GrassTile from "./GrassTile"
 import DirtRoad from "./DirtRoad"
+import { Fragment } from "react"
 
-type MapType = Array<Array<[number, number, "dirt-road" | "grass", number?]>>
+type MapType = Array<
+    Array<[number, number, "dirt-road" | "grass" | "dirt-road-center", number?]>
+>
 
 function GetNGrassTiles({
     n,
@@ -55,11 +62,13 @@ function GetNDirtRoadTiles({
     nstart = 0,
     rotateZ = 0,
     row,
+    center = false,
 }: {
     n: number
     nstart?: number
     rotateZ?: number
     row: number
+    center?: boolean
 }) {
     const tiles = []
     for (let i = 0; i < n; i++) {
@@ -67,6 +76,9 @@ function GetNDirtRoadTiles({
         const rand = Math.random() * 100
         if (rand < 30) {
             kind = 0
+        }
+        if (center) {
+            kind = 2
         }
 
         tiles.push(
@@ -83,8 +95,8 @@ function GetNDirtRoadTiles({
 
 export default function Page() {
     //*Camera settings
-    const cameraPosition = new THREE.Vector3(10, 10, 0)
-    const cameraOrigin = new THREE.Vector3(0, 0, 0)
+    const cameraPosition = new THREE.Vector3(40, 100, 20)
+    const cameraOrigin = new THREE.Vector3(0, 0, 20)
     const fov = 25
 
     /*
@@ -109,7 +121,9 @@ export default function Page() {
         if (i === 5) {
             MAP.push([
                 [12, 0, "grass"],
-                [8, 12, "dirt-road"],
+                [5, 12, "dirt-road"],
+                [1, 17, "dirt-road-center"],
+                [2, 18, "dirt-road"],
             ])
         } else {
             MAP.push([
@@ -123,12 +137,30 @@ export default function Page() {
     return (
         <div className="h-full w-full ">
             <Canvas camera={{ position: cameraPosition, fov, far: 15000 }}>
-                <OrbitControls target={cameraOrigin} />
+                <OrbitControls
+                    target={cameraOrigin}
+                    maxDistance={200}
+                    minDistance={100}
+                    maxAzimuthAngle={Math.PI * 0.75}
+                    minAzimuthAngle={Math.PI * 0.25}
+                    maxPolarAngle={Math.PI / 2}
+                    minPolarAngle={Math.PI * 0.25}
+                    onChange={(e?: OrbitControlsChangeEvent | undefined) => {
+                        const currentY = e?.target.object.position.y
+                        if (currentY)
+                            if (currentY > 220) {
+                                e?.target.object.position.setY(220)
+                            } else if (currentY < 50) {
+                                e?.target.object.position.setY(50)
+                            }
+                    }}
+                />
                 <directionalLight position={[2, 4, 1]} />
+                <ambientLight intensity={0.1} />
                 {MAP.map((row, i) => (
-                    <>
+                    <Fragment key={i}>
                         {row.map((block, j) => (
-                            <>
+                            <Fragment key={j}>
                                 {block[2] === "grass" ? (
                                     <GetNGrassTiles
                                         n={block[0]}
@@ -141,6 +173,11 @@ export default function Page() {
                                         n={block[0]}
                                         row={i}
                                         key={j}
+                                        center={
+                                            block[2] === "dirt-road-center"
+                                                ? true
+                                                : false
+                                        }
                                         rotateZ={
                                             block[3] !== undefined
                                                 ? block[3]
@@ -149,14 +186,18 @@ export default function Page() {
                                         nstart={block[1]}
                                     />
                                 )}
-                            </>
+                            </Fragment>
                         ))}
-                    </>
+                    </Fragment>
                 ))}
 
                 <GLTFModelLoader
                     src="/models/houses/red-1.gltf"
                     position={new THREE.Vector3(5, 1, 26)}
+                />
+                <GLTFModelLoader
+                    src="/models/houses/red-1.gltf"
+                    position={new THREE.Vector3(5, 1, 15)}
                 />
             </Canvas>
         </div>

@@ -19,21 +19,44 @@ export default function DirtRoad({ position, rotation, kind }) {
     useEffect(() => {
         dirtRef.current.material = hovered ? materials.Rock : materials.Dirt
     }, [hovered])
+    const grassElevation = 0.01
     if (kind === 0) {
         return (
             <group position={position} rotation={rotation} dispose={null}>
                 <mesh
-                    ref={dirtRef}
-                    geometry={nodes.Cube001.geometry}
+                    geometry={nodes.Block.geometry}
                     material={materials.Dirt}
-                    onPointerEnter={() => setHovered(true)}
-                    onPointerLeave={() => setHovered(false)}
                 />
                 <mesh
-                    geometry={nodes.Sphere001.geometry}
+                    geometry={nodes.Rock001.geometry}
                     material={materials.Rock}
                     position={[0.719, 0.996, -0.152]}
                     scale={[0.729, 0.28, 0.729]}
+                />
+                <mesh
+                    geometry={nodes.Road.geometry}
+                    material={materials.DirtRoad}
+                    position={[0, -0.004 + grassElevation, 0.002]}
+                    onPointerEnter={() => setHovered(true)}
+                    onPointerLeave={() => setHovered(false)}
+                    ref={dirtRef}
+                />
+            </group>
+        )
+    } else if (kind === 1) {
+        return (
+            <group position={position} rotation={rotation} dispose={null}>
+                <mesh
+                    geometry={nodes.Block.geometry}
+                    material={materials.Dirt}
+                />
+                <mesh
+                    geometry={nodes.Road.geometry}
+                    material={materials.DirtRoad}
+                    position={[0, -0.004 + grassElevation, 0.002]}
+                    onPointerEnter={() => setHovered(true)}
+                    onPointerLeave={() => setHovered(false)}
+                    ref={dirtRef}
                 />
             </group>
         )
@@ -41,11 +64,12 @@ export default function DirtRoad({ position, rotation, kind }) {
         return (
             <group position={position} rotation={rotation} dispose={null}>
                 <mesh
-                    ref={dirtRef}
-                    geometry={nodes.Cube001.geometry}
-                    material={materials.Dirt}
+                    geometry={nodes.Road.geometry}
+                    material={materials.DirtRoad}
+                    position={[0, -0.004 + grassElevation, 0.002]}
                     onPointerEnter={() => setHovered(true)}
                     onPointerLeave={() => setHovered(false)}
+                    ref={dirtRef}
                 />
             </group>
         )

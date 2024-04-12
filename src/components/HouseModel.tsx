@@ -12,7 +12,7 @@ export default function HouseModel() {
     const gltf = useLoader(GLTFLoader, fileUrl)
     return (
         <mesh ref={mesh} scale={0.2}>
-            <primitive object={gltf.scene} dispose={null} />
+            <primitive object={gltf.scene.clone()} dispose={null} />
         </mesh>
     )
 }
