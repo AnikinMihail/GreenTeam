@@ -21,6 +21,7 @@ export default function GrassTile({ position, rotation, kind }) {
             ? materials["Rock.001"]
             : materials.Grass
     }, [hovered])
+    const grassElevation = 0.04
     if (kind === 0) {
         return (
             <group position={position} rotation={rotation} dispose={null}>
@@ -32,21 +33,21 @@ export default function GrassTile({ position, rotation, kind }) {
                     ref={grassRef}
                     geometry={nodes.Grass.geometry}
                     material={materials.Grass}
-                    position={[0, 0.03, 0]}
+                    position={[0, grassElevation, 0]}
                     onPointerEnter={() => setHovered(true)}
                     onPointerLeave={() => setHovered(false)}
                 />
                 <mesh
                     geometry={nodes.Grass_1.geometry}
                     material={materials["Grass-tall"]}
-                    position={[-0.092, 0.794, -0.487]}
+                    position={[-0.092, 0.794 + grassElevation, -0.487]}
                     rotation={[Math.PI, 0, Math.PI]}
                     scale={0.342}
                 />
                 <mesh
                     geometry={nodes.Sphere.geometry}
                     material={materials["Rock.001"]}
-                    position={[-0.497, 1.006, 0.31]}
+                    position={[-0.497, 1.006 + grassElevation, 0.31]}
                     scale={[1, 0.558, 1]}
                 />
             </group>
@@ -62,7 +63,7 @@ export default function GrassTile({ position, rotation, kind }) {
                     ref={grassRef}
                     geometry={nodes.Grass.geometry}
                     material={materials.Grass}
-                    position={[0, 0.03, 0]}
+                    position={[0, grassElevation, 0]}
                     onPointerEnter={() => setHovered(true)}
                     onPointerLeave={() => setHovered(false)}
                 />
@@ -85,7 +86,7 @@ export default function GrassTile({ position, rotation, kind }) {
                     ref={grassRef}
                     geometry={nodes.Grass.geometry}
                     material={materials.Grass}
-                    position={[0, 0.03, 0]}
+                    position={[0, grassElevation, 0]}
                     onPointerEnter={() => setHovered(true)}
                     onPointerLeave={() => setHovered(false)}
                 />
