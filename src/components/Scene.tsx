@@ -11,10 +11,11 @@ import HouseModel from "./HouseModelRed1"
 import GLTFModelLoader from "./GLTFModelLoader"
 import GrassTile from "./GrassTile"
 import DirtRoad from "./DirtRoad"
-import { Fragment, useEffect } from "react"
+import { Fragment, useEffect, useState } from "react"
 import HouseModelRed1 from "./HouseModelRed1"
 import { Button } from "./ui/button"
 import { useSearchParams, useRouter } from "next/navigation"
+import GrownTree from "./GrownTree"
 
 type MapType = Array<
     Array<[number, number, "dirt-road" | "grass" | "dirt-road-center", number?]>
@@ -35,18 +36,18 @@ function GetNGrassTiles({
     const rotations = localStorage.getItem("rotations")?.split("|")
     const tiles = []
     for (let i = 0; i < n; i++) {
-        const rotateZ = rotations
-            ? +rotations[row * (n + nstart) + i + nstart]
-            : 0
+        const id = row * (n + nstart) + i + nstart
+        const rotateZ = rotations ? +rotations[id] : 0
         tiles.push(
             <GrassTile
                 key={i}
+                id={id}
                 editMode={editMode}
                 props={{
                     position: [row * 2, 0, i * 2 + nstart * 2],
                     rotation: [0, rotateZ, 0],
                 }}
-                kind={kinds ? +kinds[row * (n + nstart) + i + nstart] : 0}
+                kind={kinds ? +kinds[id] : 0}
             />,
         )
     }
@@ -93,6 +94,8 @@ export default function Page() {
     const router = useRouter()
     const searchParams = useSearchParams()
 
+    const [treeID, setTreeID] = useState<number[] | undefined>(undefined)
+
     //Camera settings
     const cameraPosition = new THREE.Vector3(40, 100, 20)
     const cameraOrigin = new THREE.Vector3(0, 0, 20)
@@ -104,7 +107,10 @@ export default function Page() {
         MAP.push([[20, 0, "grass"]])
     }
 
-    if (localStorage.getItem("kinds") === null) {
+    if (
+        typeof window !== "undefined" &&
+        localStorage.getItem("kinds") === null
+    ) {
         let kinds: string[] = []
         let rotations: string[] = []
         for (let i = 0; i < 400; i++) {
@@ -139,9 +145,23 @@ export default function Page() {
         localStorage.setItem("rotations", rotations.join("|"))
     }
 
+    useEffect(() => {
+        if (treeID !== undefined) {
+            localStorage.setItem("treeIDs", treeID.join("|"))
+        } else {
+            let localStorageTreeIDs: number[] | string[] | undefined =
+                localStorage.getItem("treeIDs")?.split("|")
+            let convToNum: number[] = []
+            if (localStorageTreeIDs !== undefined) {
+                localStorageTreeIDs.forEach((s) => convToNum.push(+s))
+            }
+            setTreeID([...convToNum])
+        }
+    }, [treeID])
+
     return (
         <div className="h-full w-full  ">
-            <div className="flex w-full justify-center">
+            <div className="mb-2 flex w-full flex-row justify-center gap-x-2">
                 <Button
                     className="bg-cyan-500"
                     onClick={() => {
@@ -153,7 +173,52 @@ export default function Page() {
                         }
                     }}
                 >
-                    Edit mode
+                    Интерактив
+                </Button>
+                <Button
+                    className="bg-teal-500"
+                    onClick={async () => {
+                        if (localStorage.getItem("selectedType") === "grass") {
+                            let kinds: string[] =
+                                localStorage.getItem("kinds")?.split("|") ?? []
+                            const id = localStorage.getItem("selectedID")
+                            if (id !== null && kinds[+id] !== undefined) {
+                                kinds[+id] = "3"
+                            }
+                            localStorage.setItem("kinds", kinds.join("|"))
+                            localStorage.setItem("selected", "null")
+                            localStorage.setItem("selectedType", "null")
+                            localStorage.setItem("selectedID", "null")
+                            router.replace(`?editMode=editing`)
+                            await new Promise((r) => setTimeout(r, 100))
+                            router.replace(`?editMode=true`)
+                        }
+                    }}
+                >
+                    Выровнять
+                </Button>
+                <Button
+                    className="bg-teal-500"
+                    onClick={async () => {
+                        if (localStorage.getItem("selectedType") === "grass") {
+                            let kinds: string[] =
+                                localStorage.getItem("kinds")?.split("|") ?? []
+                            const id = localStorage.getItem("selectedID")
+                            if (id !== null && kinds[+id] === "3") {
+                                if (treeID !== undefined)
+                                    setTreeID([...treeID, +id])
+                                else setTreeID([+id])
+                            }
+                            localStorage.setItem("selected", "null")
+                            localStorage.setItem("selectedType", "null")
+                            localStorage.setItem("selectedID", "null")
+                            router.replace(`?editMode=editing`)
+                            await new Promise((r) => setTimeout(r, 500))
+                            router.replace(`?editMode=true`)
+                        }
+                    }}
+                >
+                    Вырастить дерево
                 </Button>
             </div>
             <Canvas camera={{ position: cameraPosition, fov, far: 15000 }}>
@@ -221,6 +286,27 @@ export default function Page() {
                         ))}
                     </Fragment>
                 ))}
+                {treeID !== undefined ? (
+                    <>
+                        {treeID.map((id, i) => {
+                            const row = Math.floor(id / 20)
+                            const col = id % 20
+                            return (
+                                <GrownTree
+                                    key={i}
+                                    rotation={[
+                                        0,
+                                        Math.round(id / 10) * 2 * Math.PI,
+                                        0,
+                                    ]}
+                                    position={[row * 2, 0, col * 2]}
+                                />
+                            )
+                        })}
+                    </>
+                ) : (
+                    <></>
+                )}
             </Canvas>
         </div>
     )
