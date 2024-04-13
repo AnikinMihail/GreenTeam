@@ -11,8 +11,10 @@ import HouseModel from "./HouseModelRed1"
 import GLTFModelLoader from "./GLTFModelLoader"
 import GrassTile from "./GrassTile"
 import DirtRoad from "./DirtRoad"
-import { Fragment } from "react"
+import { Fragment, useEffect } from "react"
 import HouseModelRed1 from "./HouseModelRed1"
+import { Button } from "./ui/button"
+import { useSearchParams, useRouter } from "next/navigation"
 
 type MapType = Array<
     Array<[number, number, "dirt-road" | "grass" | "dirt-road-center", number?]>
@@ -22,36 +24,29 @@ function GetNGrassTiles({
     n,
     nstart = 0,
     row,
+    editMode,
 }: {
     n: number
     nstart?: number
     row: number
+    editMode: string
 }) {
+    const kinds = localStorage.getItem("kinds")?.split("|")
+    const rotations = localStorage.getItem("rotations")?.split("|")
     const tiles = []
     for (let i = 0; i < n; i++) {
-        let kind = 1
-        const rand = Math.random() * 100
-        if (rand < 30) {
-            kind = 0
-        } else if (rand < 90) {
-            kind = 2
-        }
-        const rand2 = Math.random() * 100
-        let rotateZ = 0
-        if (rand2 < 25) {
-            rotateZ = Math.PI / 2
-        } else if (rand2 < 50) {
-            rotateZ = Math.PI
-        } else if (rand2 < 75) {
-            rotateZ = (3 * Math.PI) / 2
-        }
-
+        const rotateZ = rotations
+            ? +rotations[row * (n + nstart) + i + nstart]
+            : 0
         tiles.push(
             <GrassTile
                 key={i}
-                position={[row * 2, 0, i * 2 + nstart * 2]}
-                rotation={[0, rotateZ, 0]}
-                kind={kind}
+                editMode={editMode}
+                props={{
+                    position: [row * 2, 0, i * 2 + nstart * 2],
+                    rotation: [0, rotateZ, 0],
+                }}
+                kind={kinds ? +kinds[row * (n + nstart) + i + nstart] : 0}
             />,
         )
     }
@@ -95,48 +90,72 @@ function GetNDirtRoadTiles({
 }
 
 export default function Page() {
-    //*Camera settings
+    const router = useRouter()
+    const searchParams = useSearchParams()
+
+    //Camera settings
     const cameraPosition = new THREE.Vector3(40, 100, 20)
     const cameraOrigin = new THREE.Vector3(0, 0, 20)
     const fov = 25
 
-    /*
-    !HEART
-    const MAP: MapType = [
-        [
-            [3, 2],
-            [3, 8],
-        ],
-        [[11, 1]],
-        [[13, 0]],
-        [[13, 0]],
-        [[11, 1]],
-        [[9, 2]],
-        [[7, 3]],
-        [[5, 4]],
-        [[3, 5]],
-        [[1, 6]],
-    ]*/
+    //Map of ground tiles
     let MAP: MapType = []
     for (let i = 0; i < 20; i++) {
-        if (i === 5) {
-            MAP.push([
-                [12, 0, "grass"],
-                [5, 12, "dirt-road"],
-                [1, 17, "dirt-road-center"],
-                [2, 18, "dirt-road"],
-            ])
-        } else {
-            MAP.push([
-                [17, 0, "grass"],
-                [1, 17, "dirt-road", Math.PI / 2],
-                [2, 18, "grass"],
-            ])
+        MAP.push([[20, 0, "grass"]])
+    }
+
+    if (localStorage.getItem("kinds") === null) {
+        let kinds: string[] = []
+        let rotations: string[] = []
+        for (let i = 0; i < 400; i++) {
+            //Randomly decide kind of grass in such proportions: 1: 10%, 2: 30%, 3:60%
+
+            let kind: "1" | "2" | "3" = "3"
+            const rand = Math.random() * 100
+
+            if (rand < 10) {
+                kind = "1"
+            } else if (rand < 40) {
+                kind = "2"
+            }
+
+            //Randomly decide rotation of mesh
+
+            const rand2 = Math.random() * 100
+            let rotateZ = "0"
+
+            if (rand2 < 25) {
+                rotateZ = `${Math.PI / 2}`
+            } else if (rand2 < 50) {
+                rotateZ = `${Math.PI}`
+            } else if (rand2 < 75) {
+                rotateZ = `${(3 * Math.PI) / 2}`
+            }
+
+            kinds.push(kind)
+            rotations.push(rotateZ)
         }
+        localStorage.setItem("kinds", kinds.join("|"))
+        localStorage.setItem("rotations", rotations.join("|"))
     }
 
     return (
-        <div className="h-full w-full ">
+        <div className="h-full w-full  ">
+            <div className="flex w-full justify-center">
+                <Button
+                    className="bg-cyan-500"
+                    onClick={() => {
+                        const editMode = searchParams.get("editMode")
+                        if (editMode === "true") {
+                            router.replace("?editMode=false")
+                        } else {
+                            router.replace("?editMode=true")
+                        }
+                    }}
+                >
+                    Edit mode
+                </Button>
+            </div>
             <Canvas camera={{ position: cameraPosition, fov, far: 15000 }}>
                 <OrbitControls
                     target={cameraOrigin}
@@ -166,6 +185,15 @@ export default function Page() {
                             <Fragment key={j}>
                                 {block[2] === "grass" ? (
                                     <GetNGrassTiles
+                                        editMode={
+                                            typeof searchParams.get(
+                                                "editMode",
+                                            ) === "string"
+                                                ? searchParams.get(
+                                                      "editMode",
+                                                  ) ?? "false"
+                                                : "false"
+                                        }
                                         n={block[0]}
                                         row={i}
                                         key={j}
@@ -193,11 +221,6 @@ export default function Page() {
                         ))}
                     </Fragment>
                 ))}
-
-                <HouseModelRed1
-                    position={new THREE.Vector3(9, 1, 33)}
-                    rotation={[0, 0, 0]}
-                />
             </Canvas>
         </div>
     )
