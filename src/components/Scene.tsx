@@ -7,11 +7,12 @@ import {
 } from "@react-three/drei"
 import { Canvas, useFrame } from "@react-three/fiber"
 import * as THREE from "three"
-import HouseModel from "./HouseModel"
+import HouseModel from "./HouseModelRed1"
 import GLTFModelLoader from "./GLTFModelLoader"
 import GrassTile from "./GrassTile"
 import DirtRoad from "./DirtRoad"
 import { Fragment } from "react"
+import HouseModelRed1 from "./HouseModelRed1"
 
 type MapType = Array<
     Array<[number, number, "dirt-road" | "grass" | "dirt-road-center", number?]>
@@ -139,6 +140,8 @@ export default function Page() {
             <Canvas camera={{ position: cameraPosition, fov, far: 15000 }}>
                 <OrbitControls
                     target={cameraOrigin}
+                    /*
+                    !Controls boundaries, enable on production
                     maxDistance={200}
                     minDistance={100}
                     maxAzimuthAngle={Math.PI * 0.75}
@@ -153,7 +156,7 @@ export default function Page() {
                             } else if (currentY < 50) {
                                 e?.target.object.position.setY(50)
                             }
-                    }}
+                    }}*/
                 />
                 <directionalLight position={[2, 4, 1]} />
                 <ambientLight intensity={0.1} />
@@ -191,13 +194,9 @@ export default function Page() {
                     </Fragment>
                 ))}
 
-                <GLTFModelLoader
-                    src="/models/houses/red-1.gltf"
-                    position={new THREE.Vector3(5, 1, 26)}
-                />
-                <GLTFModelLoader
-                    src="/models/houses/red-1.gltf"
-                    position={new THREE.Vector3(5, 1, 15)}
+                <HouseModelRed1
+                    position={new THREE.Vector3(9, 1, 33)}
+                    rotation={[0, 0, 0]}
                 />
             </Canvas>
         </div>
