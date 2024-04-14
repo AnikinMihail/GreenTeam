@@ -1,5 +1,6 @@
 import MaxWidthWrapper from "@/components/MaxWidthWrapper"
 import Scene from "@/components/Scene"
+import { Loader } from "lucide-react"
 import { Suspense } from "react"
 
 export default function Home() {
@@ -9,7 +10,7 @@ export default function Home() {
                 <h1 className="text-center text-3xl font-bold">Scene</h1>
             </MaxWidthWrapper>
             <div className="h-screen w-[99vw] ps-3">
-                <Suspense>
+                <Suspense fallback={<Loader className="animate-spin"></Loader>}>
                     <Scene />
                 </Suspense>
             </div>

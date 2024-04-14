@@ -1,163 +1,235 @@
 "use client"
 
-import {
-    Clone,
-    OrbitControls,
-    OrbitControlsChangeEvent,
-} from "@react-three/drei"
-import { Canvas, useFrame } from "@react-three/fiber"
+import { OrbitControls, OrbitControlsChangeEvent } from "@react-three/drei"
+import type { OrbitControls as OrbitControlsImpl } from "three-stdlib"
+import { Canvas } from "@react-three/fiber"
 import * as THREE from "three"
-import HouseModel from "./HouseModelRed1"
-import GLTFModelLoader from "./GLTFModelLoader"
 import GrassTile from "./GrassTile"
-import DirtRoad from "./DirtRoad"
-import { Fragment, useEffect, useState } from "react"
-import HouseModelRed1 from "./HouseModelRed1"
+import { Fragment, useEffect, useRef, useState } from "react"
 import { Button } from "./ui/button"
-import { useSearchParams, useRouter } from "next/navigation"
 import GrownTree from "./GrownTree"
 
-type MapType = Array<
-    Array<[number, number, "dirt-road" | "grass" | "dirt-road-center", number?]>
->
+export type BlockType = "grass-1" | "grass-2" | "plane" | "null"
+export type ObjectType = "tree" | "null"
+export type Action =
+    | "Clear from grass"
+    | "Grow a tree"
+    | "Chop down a tree"
+    | "Plant grass"
+export type ObjectID = { x: number; y: number }
 
-function GetNGrassTiles({
-    n,
-    nstart = 0,
-    row,
-    editMode,
-}: {
-    n: number
-    nstart?: number
-    row: number
-    editMode: string
-}) {
-    const kinds = localStorage.getItem("kinds")?.split("|")
-    const rotations = localStorage.getItem("rotations")?.split("|")
-    const tiles = []
-    for (let i = 0; i < n; i++) {
-        const id = row * (n + nstart) + i + nstart
-        const rotateZ = rotations ? +rotations[id] : 0
-        tiles.push(
+type generateGrassTileProps = {
+    props: BlockInfo
+    isInteractive: boolean
+    action: Action | null
+    selectedObjectID: ObjectID | null
+    handleClick: () => void
+}
+
+type generateTreeProps = {
+    props: ObjectInfo
+}
+
+export interface BlockInfo {
+    type: BlockType
+    rotation: number
+    id: ObjectID
+}
+export interface ObjectInfo {
+    type: ObjectType
+    rotation: number
+    id: ObjectID
+}
+
+function generateGrassTile({
+    props,
+    isInteractive,
+    action,
+    selectedObjectID,
+    handleClick,
+}: generateGrassTileProps) {
+    if (props && props.id) {
+        return (
             <GrassTile
-                key={i}
-                id={id}
-                editMode={editMode}
-                props={{
-                    position: [row * 2, 0, i * 2 + nstart * 2],
-                    rotation: [0, rotateZ, 0],
-                }}
-                kind={kinds ? +kinds[id] : 0}
-            />,
+                info={props}
+                props={{ position: [props.id.x * 2, 0, props.id.y * 2] }}
+                isInteractive={isInteractive}
+                action={action}
+                selectedObjectID={selectedObjectID}
+                handleClick={handleClick}
+            />
         )
     }
-    return <>{tiles}</>
+    return <></>
 }
 
-function GetNDirtRoadTiles({
-    n,
-    nstart = 0,
-    rotateZ = 0,
-    row,
-    center = false,
-}: {
-    n: number
-    nstart?: number
-    rotateZ?: number
-    row: number
-    center?: boolean
-}) {
-    const tiles = []
-    for (let i = 0; i < n; i++) {
-        let kind = 1
-        const rand = Math.random() * 100
-        if (rand < 30) {
-            kind = 0
-        }
-        if (center) {
-            kind = 2
-        }
-
-        tiles.push(
-            <DirtRoad
-                key={i}
-                position={[row * 2, 0, i * 2 + nstart * 2]}
-                rotation={[0, rotateZ, 0]}
-                kind={kind}
-            />,
+function generateTree({ props }: generateTreeProps) {
+    if (props.id) {
+        return (
+            <GrownTree
+                position={[props.id.x * 2, 1, props.id.y * 2]}
+                rotation={[0, props.rotation, 0]}
+            />
         )
     }
-    return <>{tiles}</>
+    return <></>
 }
 
-export default function Page() {
-    const router = useRouter()
-    const searchParams = useSearchParams()
+export default function Scene() {
+    //Game states
+    const [blockMap, setBlockMap] = useState<BlockInfo[][] | null>(null)
+    const [objectMap, setObjectMap] = useState<ObjectInfo[][] | null>(null)
 
-    const [treeID, setTreeID] = useState<number[] | undefined>(undefined)
+    const [isInteractive, setIsInteractive] = useState(false)
+    const [selectedObjectID, setSelectedObjectID] = useState<ObjectID | null>(
+        null,
+    )
+    const [action, setAction] = useState<Action | null>(null)
+
+    //Initial state
+    //! Currently using local storage -> change to server in near future
+
+    useEffect(() => {
+        if (
+            typeof window !== "undefined" && //Check if in client component(to prevent 500 errors on load)
+            (blockMap === null || objectMap === null) //Prevent unwanted rerenders
+        ) {
+            if (localStorage.getItem("blockMap") === null) {
+                let map: BlockInfo[][] = []
+                for (let i = 0; i < 20; i++) {
+                    let row: BlockInfo[] = []
+                    for (let j = 0; j < 20; j++) {
+                        //Initially setting blocks to random types of grass & random rotations
+
+                        let type: BlockType = "grass-1"
+                        let rotation = 0
+
+                        let randomN = Math.random() * 100
+                        if (randomN < 50) type = "grass-2"
+
+                        randomN = Math.random() * 100
+                        if (randomN < 25) rotation = Math.PI / 2
+                        else if (randomN < 50) rotation = Math.PI
+                        else if (randomN < 75) rotation = (3 * Math.PI) / 2
+
+                        const id = { x: i, y: j }
+                        row.push({ type, rotation, id })
+                    }
+                    map.push(row)
+                }
+                localStorage.setItem("blockMap", JSON.stringify(map))
+            }
+            if (localStorage.getItem("objectMap") === null) {
+                let map: ObjectInfo[][] = []
+                for (let i = 0; i < 20; i++) {
+                    //Initially setting objects to null & 0 rotation
+
+                    let row: ObjectInfo[] = []
+                    for (let j = 0; j < 20; j++) {
+                        const type: ObjectType = "null"
+                        const rotation = 0
+                        const id = { x: i, y: j }
+
+                        row.push({ type, rotation, id })
+                    }
+                    map.push(row)
+                }
+                localStorage.setItem("objectMap", JSON.stringify(map))
+            }
+            let localBlockMap = localStorage.getItem("blockMap")
+            if (localBlockMap !== null) {
+                setBlockMap(JSON.parse(localBlockMap))
+            }
+            let localObjectMap = localStorage.getItem("objectMap")
+            if (localObjectMap !== null) {
+                setObjectMap(JSON.parse(localObjectMap))
+            }
+        }
+    }, [])
+
+    //On action activation do action or do nothing
+
+    useEffect(() => {
+        let map = blockMap
+        let objMap = objectMap
+        if (
+            action !== null &&
+            selectedObjectID !== null &&
+            map !== null &&
+            objMap !== null
+        ) {
+            if (action === "Clear from grass") {
+                map[selectedObjectID.x][selectedObjectID.y].type = "plane"
+                setBlockMap(map)
+                localStorage.setItem("blockMap", JSON.stringify(map))
+            } else if (action === "Grow a tree") {
+                if (
+                    objMap[selectedObjectID.x][selectedObjectID.y].type ===
+                        "null" &&
+                    map[selectedObjectID.x][selectedObjectID.y].type === "plane"
+                ) {
+                    //Randomly setting tree's rotation
+
+                    let rotation = 0
+
+                    let randomN = Math.random() * 100
+                    if (randomN < 25) rotation = Math.PI / 2
+                    else if (randomN < 50) rotation = Math.PI
+                    else if (randomN < 75) rotation = (3 * Math.PI) / 2
+
+                    objMap[selectedObjectID.x][selectedObjectID.y].type = "tree"
+                    objMap[selectedObjectID.x][selectedObjectID.y].rotation =
+                        rotation
+                }
+                setObjectMap(objMap)
+                localStorage.setItem("objectMap", JSON.stringify(objMap))
+            } else if (action === "Chop down a tree") {
+                if (
+                    objMap[selectedObjectID.x][selectedObjectID.y].type !==
+                    "null"
+                ) {
+                    objMap[selectedObjectID.x][selectedObjectID.y].type = "null"
+                    objMap[selectedObjectID.x][selectedObjectID.y].rotation = 0
+                }
+                setObjectMap(objMap)
+                localStorage.setItem("objectMap", JSON.stringify(objMap))
+            } else if (action === "Plant grass") {
+                if (
+                    map[selectedObjectID.x][selectedObjectID.y].type ===
+                        "plane" &&
+                    objMap[selectedObjectID.x][selectedObjectID.y].type ===
+                        "null"
+                ) {
+                    //Randomly setting type of grass and block's rotation
+                    let type: BlockType = "grass-1"
+                    let rotation = 0
+
+                    let randomN = Math.random() * 100
+                    if (randomN < 50) type = "grass-2"
+
+                    randomN = Math.random() * 100
+                    if (randomN < 25) rotation = Math.PI / 2
+                    else if (randomN < 50) rotation = Math.PI
+                    else if (randomN < 75) rotation = (3 * Math.PI) / 2
+
+                    map[selectedObjectID.x][selectedObjectID.y].type = type
+                    map[selectedObjectID.x][selectedObjectID.y].rotation =
+                        rotation
+                    setBlockMap(map)
+                    localStorage.setItem("blockMap", JSON.stringify(map))
+                }
+            }
+        }
+        setAction(null)
+    }, [action])
 
     //Camera settings
     const cameraPosition = new THREE.Vector3(40, 100, 20)
-    const cameraOrigin = new THREE.Vector3(0, 0, 20)
+    const [cameraOrigin, setCameraOrigin] = useState(
+        new THREE.Vector3(0, 0, 20),
+    )
     const fov = 25
-
-    //Map of ground tiles
-    let MAP: MapType = []
-    for (let i = 0; i < 20; i++) {
-        MAP.push([[20, 0, "grass"]])
-    }
-
-    if (
-        typeof window !== "undefined" &&
-        localStorage.getItem("kinds") === null
-    ) {
-        let kinds: string[] = []
-        let rotations: string[] = []
-        for (let i = 0; i < 400; i++) {
-            //Randomly decide kind of grass in such proportions: 1: 10%, 2: 30%, 3:60%
-
-            let kind: "1" | "2" | "3" = "3"
-            const rand = Math.random() * 100
-
-            if (rand < 10) {
-                kind = "1"
-            } else if (rand < 40) {
-                kind = "2"
-            }
-
-            //Randomly decide rotation of mesh
-
-            const rand2 = Math.random() * 100
-            let rotateZ = "0"
-
-            if (rand2 < 25) {
-                rotateZ = `${Math.PI / 2}`
-            } else if (rand2 < 50) {
-                rotateZ = `${Math.PI}`
-            } else if (rand2 < 75) {
-                rotateZ = `${(3 * Math.PI) / 2}`
-            }
-
-            kinds.push(kind)
-            rotations.push(rotateZ)
-        }
-        localStorage.setItem("kinds", kinds.join("|"))
-        localStorage.setItem("rotations", rotations.join("|"))
-    }
-
-    useEffect(() => {
-        if (treeID !== undefined) {
-            localStorage.setItem("treeIDs", treeID.join("|"))
-        } else {
-            let localStorageTreeIDs: number[] | string[] | undefined =
-                localStorage.getItem("treeIDs")?.split("|")
-            let convToNum: number[] = []
-            if (localStorageTreeIDs !== undefined) {
-                localStorageTreeIDs.forEach((s) => convToNum.push(+s))
-            }
-            setTreeID([...convToNum])
-        }
-    }, [treeID])
+    const orbitControlsRef = useRef<OrbitControlsImpl>(null!)
 
     return (
         <div className="h-full w-full  ">
@@ -165,67 +237,50 @@ export default function Page() {
                 <Button
                     className="bg-cyan-500"
                     onClick={() => {
-                        const editMode = searchParams.get("editMode")
-                        if (editMode === "true") {
-                            router.replace("?editMode=false")
-                        } else {
-                            router.replace("?editMode=true")
-                        }
+                        setIsInteractive(!isInteractive)
                     }}
                 >
                     Интерактив
                 </Button>
                 <Button
                     className="bg-teal-500"
-                    onClick={async () => {
-                        if (localStorage.getItem("selectedType") === "grass") {
-                            let kinds: string[] =
-                                localStorage.getItem("kinds")?.split("|") ?? []
-                            const id = localStorage.getItem("selectedID")
-                            if (id !== null && kinds[+id] !== undefined) {
-                                kinds[+id] = "3"
-                            }
-                            localStorage.setItem("kinds", kinds.join("|"))
-                            localStorage.setItem("selected", "null")
-                            localStorage.setItem("selectedType", "null")
-                            localStorage.setItem("selectedID", "null")
-                            router.replace(`?editMode=editing`)
-                            await new Promise((r) => setTimeout(r, 100))
-                            router.replace(`?editMode=true`)
-                        }
+                    onClick={() => {
+                        if (isInteractive) setAction("Clear from grass")
                     }}
                 >
                     Выровнять
                 </Button>
                 <Button
                     className="bg-teal-500"
-                    onClick={async () => {
-                        if (localStorage.getItem("selectedType") === "grass") {
-                            let kinds: string[] =
-                                localStorage.getItem("kinds")?.split("|") ?? []
-                            const id = localStorage.getItem("selectedID")
-                            if (id !== null && kinds[+id] === "3") {
-                                if (treeID !== undefined)
-                                    setTreeID([...treeID, +id])
-                                else setTreeID([+id])
-                            }
-                            localStorage.setItem("selected", "null")
-                            localStorage.setItem("selectedType", "null")
-                            localStorage.setItem("selectedID", "null")
-                            router.replace(`?editMode=editing`)
-                            await new Promise((r) => setTimeout(r, 500))
-                            router.replace(`?editMode=true`)
-                        }
+                    onClick={() => {
+                        if (isInteractive) setAction("Plant grass")
+                    }}
+                >
+                    Посадить траву
+                </Button>
+                <Button
+                    className="bg-teal-500"
+                    onClick={() => {
+                        if (isInteractive) setAction("Grow a tree")
                     }}
                 >
                     Вырастить дерево
+                </Button>
+                <Button
+                    className="bg-rose-600"
+                    onClick={() => {
+                        if (isInteractive) setAction("Chop down a tree")
+                    }}
+                >
+                    Срубить дерево
                 </Button>
             </div>
             <Canvas camera={{ position: cameraPosition, fov, far: 15000 }}>
                 <OrbitControls
                     target={cameraOrigin}
-                    /*
-                    !Controls boundaries, enable on production
+                    enableDamping={false}
+                    ref={orbitControlsRef}
+                    //!Controls boundaries, enable on production
                     maxDistance={200}
                     minDistance={100}
                     maxAzimuthAngle={Math.PI * 0.75}
@@ -240,69 +295,67 @@ export default function Page() {
                             } else if (currentY < 50) {
                                 e?.target.object.position.setY(50)
                             }
-                    }}*/
+                    }}
                 />
                 <directionalLight position={[2, 4, 1]} />
                 <ambientLight intensity={0.1} />
-                {MAP.map((row, i) => (
-                    <Fragment key={i}>
-                        {row.map((block, j) => (
-                            <Fragment key={j}>
-                                {block[2] === "grass" ? (
-                                    <GetNGrassTiles
-                                        editMode={
-                                            typeof searchParams.get(
-                                                "editMode",
-                                            ) === "string"
-                                                ? searchParams.get(
-                                                      "editMode",
-                                                  ) ?? "false"
-                                                : "false"
-                                        }
-                                        n={block[0]}
-                                        row={i}
-                                        key={j}
-                                        nstart={block[1]}
-                                    />
-                                ) : (
-                                    <GetNDirtRoadTiles
-                                        n={block[0]}
-                                        row={i}
-                                        key={j}
-                                        center={
-                                            block[2] === "dirt-road-center"
-                                                ? true
-                                                : false
-                                        }
-                                        rotateZ={
-                                            block[3] !== undefined
-                                                ? block[3]
-                                                : 0
-                                        }
-                                        nstart={block[1]}
-                                    />
-                                )}
+
+                {blockMap !== null ? (
+                    <>
+                        {blockMap.map((row, i) => (
+                            <Fragment key={i}>
+                                {row.map((obj, j) => (
+                                    <Fragment key={j}>
+                                        {generateGrassTile({
+                                            props: obj,
+                                            isInteractive,
+                                            action,
+                                            selectedObjectID,
+                                            handleClick: () => {
+                                                if (isInteractive) {
+                                                    orbitControlsRef.current.saveState()
+                                                    if (
+                                                        selectedObjectID !==
+                                                        obj.id
+                                                    ) {
+                                                        setSelectedObjectID(
+                                                            obj.id,
+                                                        )
+                                                    } else {
+                                                        setSelectedObjectID(
+                                                            null,
+                                                        )
+                                                    }
+                                                }
+                                            },
+                                        })}
+                                    </Fragment>
+                                ))}
                             </Fragment>
                         ))}
-                    </Fragment>
-                ))}
-                {treeID !== undefined ? (
+                    </>
+                ) : (
+                    <></>
+                )}
+                {objectMap !== null ? (
                     <>
-                        {treeID.map((id, i) => {
-                            const row = Math.floor(id / 20)
-                            const col = id % 20
-                            return (
-                                <GrownTree
-                                    key={i}
-                                    rotation={[
-                                        0,
-                                        Math.round(id / 10) * 2 * Math.PI,
-                                        0,
-                                    ]}
-                                    position={[row * 2, 0, col * 2]}
-                                />
-                            )
-                        })}
+                        {objectMap.map((row, i) => (
+                            <Fragment key={i}>
+                                {row.map((obj, j) => {
+                                    const type = obj.type
+                                    if (type === "tree") {
+                                        return (
+                                            <Fragment key={j}>
+                                                {generateTree({
+                                                    props: obj,
+                                                })}
+                                            </Fragment>
+                                        )
+                                    }
+                                    return <Fragment key={j}></Fragment>
+                                })}
+                            </Fragment>
+                        ))}
                     </>
                 ) : (
                     <></>

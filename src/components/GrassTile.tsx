@@ -4,6 +4,7 @@ import * as THREE from "three"
 import React, { useEffect, useRef, useState } from "react"
 import { useGLTF } from "@react-three/drei"
 import { GLTF } from "three-stdlib"
+import { Action, BlockInfo, ObjectID } from "./Scene"
 
 type GLTFResult = GLTF & {
     nodes: {
@@ -40,17 +41,21 @@ type ContextType = Record<
 >
 
 type SecondaryProps = {
-    editMode: string
-    kind: number
-    id: number
+    info: BlockInfo
     props: JSX.IntrinsicElements["group"]
+    isInteractive: boolean
+    action: Action | null
+    selectedObjectID: ObjectID | null
+    handleClick: () => void
 }
 
 export default function GrassTile({
-    editMode,
-    kind,
-    id,
+    info,
     props,
+    isInteractive,
+    action,
+    selectedObjectID,
+    handleClick,
 }: SecondaryProps) {
     const group = useRef<THREE.Group>(null!)
     const { nodes, materials } = useGLTF(
@@ -61,29 +66,32 @@ export default function GrassTile({
     const [isSelected, setIsSelected] = useState(false) //State for mouse hovering over grass
     const grassRef = useRef<THREE.Mesh>(null!) //Reference to grass block mesh
 
+    //Compare id to that of hovered / selected
+
+    useEffect(() => {
+        if (selectedObjectID === info.id) setIsSelected(true)
+        else setIsSelected(false)
+    }, [selectedObjectID])
+
     //Change grass color when hovered or selected
 
     useEffect(() => {
-        if (editMode === "true") {
+        if (isInteractive) {
             if (isSelected)
                 grassRef.current.material = materials.SelectedMaterial
             else if (isHovered)
                 grassRef.current.material = materials.RockMaterial
             else grassRef.current.material = materials.GrassMaterial
         } else grassRef.current.material = materials.GrassMaterial
-    }, [isHovered, isSelected, editMode])
-
-    //Store and compare selected object id in localStorage
-    useEffect(() => {
-        if (localStorage.getItem("selected") === `${grassRef.current.id}`)
-            setIsSelected(true)
-        else {
-            setIsSelected(false)
-        }
-    }, [editMode])
+    }, [isHovered, isSelected, isInteractive])
 
     return (
-        <group ref={group} {...props} dispose={null}>
+        <group
+            ref={group}
+            {...props}
+            rotation={[0, info.rotation, 0]}
+            dispose={null}
+        >
             <group name="Scene">
                 <mesh
                     name="Block"
@@ -99,36 +107,18 @@ export default function GrassTile({
                     position={[0, 0.998, 0]}
                     rotation={[-Math.PI, 0, -Math.PI]}
                     scale={[-1, -0.04, -1]}
-                    onPointerEnter={() => setIsHovered(true)}
-                    onPointerLeave={() => setIsHovered(false)}
+                    onPointerEnter={() => {
+                        setIsHovered(true)
+                    }}
+                    onPointerLeave={() => {
+                        setIsHovered(false)
+                    }}
                     onClick={() => {
-                        if (editMode === "true") {
-                            const selected = localStorage.getItem("selected")
-                            if (
-                                (selected === null || selected === "null") &&
-                                isSelected === false
-                            ) {
-                                localStorage.setItem(
-                                    "selected",
-                                    `${grassRef.current.id}`,
-                                )
-                                localStorage.setItem("selectedType", "grass")
-                                localStorage.setItem("selectedID", `${id}`)
-                                setIsSelected(true)
-                            } else if (
-                                selected !== null &&
-                                selected !== "null" &&
-                                isSelected === true
-                            ) {
-                                localStorage.setItem("selected", "null")
-                                localStorage.setItem("selectedType", "null")
-                                localStorage.setItem("selectedID", "null")
-                                setIsSelected(false)
-                            }
-                        }
+                        handleClick()
                     }}
                 />
-                {kind === 1 ? (
+
+                {info.type === "grass-1" ? (
                     <>
                         <mesh
                             name="RockM01"
@@ -168,7 +158,7 @@ export default function GrassTile({
                             scale={0.365}
                         />
                     </>
-                ) : kind === 2 ? (
+                ) : info.type === "grass-2" ? (
                     <>
                         <mesh
                             name="RockM02"
