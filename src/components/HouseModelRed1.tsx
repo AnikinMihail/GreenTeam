@@ -9,6 +9,8 @@ import * as THREE from "three"
 import React, { useEffect, useRef, useState } from "react"
 import { useGLTF } from "@react-three/drei"
 import { GLTF } from "three-stdlib"
+import { ObjectID, ObjectInfo } from "./Scene"
+import { useFrame } from "@react-three/fiber"
 
 type GLTFResult = GLTF & {
     nodes: {
@@ -22,6 +24,10 @@ type GLTFResult = GLTF & {
         Walls: THREE.Mesh
         WindowFrames: THREE.Mesh
         WindowGlasses: THREE.Mesh
+        FakeUser1: THREE.Mesh
+        FakeUser2: THREE.Mesh
+        FakeUser3: THREE.Mesh
+        FakeUser4: THREE.Mesh
     }
     materials: {
         walls: THREE.MeshStandardMaterial
@@ -31,6 +37,10 @@ type GLTFResult = GLTF & {
         Material: THREE.MeshStandardMaterial
         gray: THREE.MeshStandardMaterial
         Glass: THREE.MeshStandardMaterial
+        walls2: THREE.MeshStandardMaterial
+        walls3: THREE.MeshStandardMaterial
+        walls4: THREE.MeshStandardMaterial
+        walls5: THREE.MeshStandardMaterial
     }
     animations: any[]
 }
@@ -40,11 +50,24 @@ type ContextType = Record<
     React.ForwardRefExoticComponent<JSX.IntrinsicElements["mesh"]>
 >
 
-export default function HouseModelRed1(props: JSX.IntrinsicElements["group"]) {
+type SecondaryProps = {
+    isInteractive: boolean
+    selectedObjectID: ObjectID | null
+    handleClick: () => void
+}
+
+export default function HouseModelRed1({
+    info,
+    props,
+}: {
+    info: ObjectInfo
+    props: JSX.IntrinsicElements["group"]
+}) {
     const { nodes, materials } = useGLTF(
         "/models/transformed/red-1-transformed.glb",
     ) as GLTFResult
 
+    //References to all parts of the model
     const houseRef = useRef<THREE.Mesh>(null!)
     const roofRef = useRef<THREE.Mesh>(null!)
     const chimneyTopRef = useRef<THREE.Mesh>(null!)
@@ -54,51 +77,39 @@ export default function HouseModelRed1(props: JSX.IntrinsicElements["group"]) {
     const windowFramesRef = useRef<THREE.Mesh>(null!)
     const doorRef = useRef<THREE.Mesh>(null!)
     const doorKnobRef = useRef<THREE.Mesh>(null!)
-    const [hovered, setHovered] = useState(false)
-    useEffect(() => {
-        houseRef.current.material = hovered ? materials.Glass : materials.walls
-        roofRef.current.material = hovered
-            ? materials.Glass
-            : materials["Material.001"]
-        chimneyTopRef.current.material = hovered
-            ? materials.Glass
-            : materials.walls
-        chimneyRef.current.material = hovered
-            ? materials.Glass
-            : materials.walls
-        doorRef.current.material = hovered ? materials.Glass : materials.Door
-        doorKnobRef.current.material = hovered
-            ? materials.Glass
-            : materials["Door knob"]
-        stairsRef.current.material = hovered
-            ? materials.Glass
-            : materials.Material
-        stepRef.current.material = hovered
-            ? materials.Glass
-            : materials["Material.001"]
-        windowFramesRef.current.material = hovered
-            ? materials.Glass
-            : materials.gray
-    }, [hovered])
+
     return (
-        <group
-            {...props}
-            dispose={null}
-            onPointerEnter={() => setHovered(true)}
-            onPointerLeave={() => {
-                setHovered(false)
-            }}
-        >
+        <group {...props} dispose={null}>
             <mesh
                 geometry={nodes.Chimney.geometry}
-                material={materials.walls}
+                material={
+                    info.type.includes("red")
+                        ? materials.walls
+                        : info.type.includes("aqua")
+                          ? materials.walls2
+                          : info.type.includes("yellow")
+                            ? materials.walls3
+                            : info.type.includes("blue")
+                              ? materials.walls4
+                              : materials.walls5
+                }
                 position={[-5.775, 5.012, -1.268]}
                 scale={[0.425, 1.904, 0.339]}
                 ref={chimneyRef}
             />
             <mesh
                 geometry={nodes.ChimneyTop.geometry}
-                material={materials.walls}
+                material={
+                    info.type.includes("red")
+                        ? materials.walls
+                        : info.type.includes("aqua")
+                          ? materials.walls2
+                          : info.type.includes("yellow")
+                            ? materials.walls3
+                            : info.type.includes("blue")
+                              ? materials.walls4
+                              : materials.walls5
+                }
                 position={[-5.775, 5.012, -1.268]}
                 scale={[0.382, 1.71, 0.305]}
                 ref={chimneyTopRef}
@@ -140,7 +151,17 @@ export default function HouseModelRed1(props: JSX.IntrinsicElements["group"]) {
             />
             <mesh
                 geometry={nodes.Walls.geometry}
-                material={materials.walls}
+                material={
+                    info.type.includes("red")
+                        ? materials.walls
+                        : info.type.includes("aqua")
+                          ? materials.walls2
+                          : info.type.includes("yellow")
+                            ? materials.walls3
+                            : info.type.includes("blue")
+                              ? materials.walls4
+                              : materials.walls5
+                }
                 position={[-4.66, 2.104, -4.002]}
                 scale={[1.485, 1.185, 1.185]}
                 ref={houseRef}
