@@ -176,7 +176,7 @@ export default function Scene() {
     const [blockMap, setBlockMap] = useState<BlockInfo[][] | null>(null)
     const [objectMap, setObjectMap] = useState<ObjectInfo[][] | null>(null)
 
-    const [isInteractive, setIsInteractive] = useState(false)
+    const [isInteractive, setIsInteractive] = useState(true)
     const [selectedObjectID, setSelectedObjectID] = useState<ObjectID | null>(
         null,
     )
